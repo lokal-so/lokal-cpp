@@ -22,5 +22,6 @@ int main(void)
 		->ignoreDuplicate();
 
 	ret = tun->create();
+	printf("resp: %s\n", ret.c_str());
 	return 0;
 }

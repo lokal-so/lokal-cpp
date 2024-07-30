@@ -1,0 +1,6 @@
+*.o
+*.d
+*.so
+*.a
+/example
+/.vscode/

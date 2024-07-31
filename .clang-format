@@ -1,0 +1,4 @@
+IndentWidth: 8
+UseTab: Always
+TabWidth: 8
+IndentCaseLabels: false

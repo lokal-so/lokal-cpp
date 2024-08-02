@@ -1,9 +1,17 @@
 #include <stdexcept>
 #include <algorithm>
+#include <memory>
+#include <functional>
 
 #include "CurlWrapper.hpp"
+#include "json.hpp"
 
 namespace LokalSo {
+
+    using json = nlohmann::json;
+
+    // https://www.boost.org/doc/libs/1_59_0/libs/smart_ptr/sp_techniques.html#handle
+    using defer = std::shared_ptr<void>;  
     
     static void ltrim(std::string &s) {
         s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
@@ -16,7 +24,7 @@ namespace LokalSo {
             return !std::isspace(ch);
         }).base(), s.end());
     }
-    
+
     static void trim(std::string &s) {
         rtrim(s);
         ltrim(s);
@@ -125,13 +133,28 @@ namespace LokalSo {
             std::string headerVal{headerMap.first + sep + headerMap.second};
             this->sList =  curl_slist_append(this->sList, headerVal.c_str());
         }
-
+        
+        defer _(nullptr, std::bind([&]{ this->reset(); }));
         auto res = curl_easy_perform(ch);
         if (res != CURLE_OK) {
-            this->reset();
             throw std::runtime_error(curl_easy_strerror(res));
 	    }
-        this->reset();
+
+        long http_code {0};
+        
+        curl_easy_getinfo(ch, CURLINFO_RESPONSE_CODE, &http_code);
+        if (http_code != 200) {
+            std::string msg;
+
+            try {
+                json j = json::parse(this->responseBody);
+                msg = j["message"];
+            } catch (json::parse_error const& e) {
+                msg = "";
+            }
+
+            throw std::runtime_error("HTTP error: " + std::to_string(http_code) + ": " + msg);
+        }
     }
 
     

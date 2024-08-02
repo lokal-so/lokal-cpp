@@ -20,7 +20,7 @@ TEST(CurlWrapper, CreateWithProperties) {
     // curl.setMethod("GET")
 
     curl.setUserAgent("UserAgent");
-    curl.setURL("https://google.com");
+    curl.setURL("https://github.com");
 
     ASSERT_EQ(curl.getReqHeader().getValue("Content-Type") , "application/json");
     ASSERT_EQ(curl.getReqHeader().getValue("Signature") , "JustASignature");
@@ -37,8 +37,18 @@ TEST(CurlWrapper, CreateWithProperties) {
 
 TEST(CurlWrapper, FailToExecute) {
     CurlWrapper curl{};
+    curl.addHeader("Content-Type", "application/json");
+    curl.addHeader("Signature", "JustASignature");
+    
+    // By default GET
+    // curl.setMethod("GET")
+
+    curl.setUserAgent("UserAgent");
+    curl.setURL("https://google.com");
 
     curl.setURL("https://127.0.0.1:8080");
 
     ASSERT_THROW(curl.execute(), std::runtime_error);
+
+    ASSERT_TRUE(curl.getReqHeader().getHeader().empty());
 }

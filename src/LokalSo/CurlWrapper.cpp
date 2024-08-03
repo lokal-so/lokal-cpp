@@ -139,12 +139,7 @@ void CurlWrapper::setUserAgent(std::string const& userAgent)
 
 void CurlWrapper::execute()
 {
-        curl_easy_setopt(this->ch, CURLOPT_URL, this->url.c_str());
-        curl_easy_setopt(this->ch, CURLOPT_USERAGENT, this->userAgent.c_str());
-        curl_easy_setopt(this->ch, CURLOPT_CUSTOMREQUEST, this->method.c_str());
-        curl_easy_setopt(this->ch, CURLOPT_POST, 1L);
-        curl_easy_setopt(this->ch, CURLOPT_POSTFIELDS, this->requestBody.data());
-        curl_easy_setopt(this->ch, CURLOPT_POSTFIELDSIZE, this->requestBody.size());
+        defer _(nullptr, std::bind([&]{ this->reset(); }));
 
         for (auto const& headerMap:this->requestHeader.getHeader()) {
                 // Content-Type: application/json
@@ -154,7 +149,17 @@ void CurlWrapper::execute()
                 this->sList =  curl_slist_append(this->sList, headerVal.c_str());
         }
 
-        defer _(nullptr, std::bind([&]{ this->reset(); }));
+        curl_easy_setopt(this->ch, CURLOPT_URL, this->url.c_str());
+        curl_easy_setopt(this->ch, CURLOPT_USERAGENT, this->userAgent.c_str());
+        curl_easy_setopt(this->ch, CURLOPT_CUSTOMREQUEST, this->method.c_str());
+        curl_easy_setopt(this->ch, CURLOPT_HTTPHEADER, this->sList);
+
+        if (!this->requestBody.empty()) {
+                curl_easy_setopt(this->ch, CURLOPT_POST, 1L);
+                curl_easy_setopt(this->ch, CURLOPT_POSTFIELDS, this->requestBody.data());
+                curl_easy_setopt(this->ch, CURLOPT_POSTFIELDSIZE, this->requestBody.size());
+        }
+
         auto res = curl_easy_perform(ch);
         if (res != CURLE_OK) {
                 throw std::runtime_error(curl_easy_strerror(res));

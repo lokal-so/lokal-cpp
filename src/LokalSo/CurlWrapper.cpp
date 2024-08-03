@@ -32,6 +32,12 @@ static void trim(std::string &s)
         ltrim(s);
 }
 
+static void toLower(std::string &s)
+{
+        std::transform(s.begin(), s.end(), s.begin(),
+        [](unsigned char c){ return std::tolower(c); });
+}
+
 void Header::addHeader(std::string const& key, std::string const& value)
 {
         this->headerMap.emplace(std::make_pair(key, value));
@@ -70,6 +76,7 @@ static size_t res_hdr_callback(void *contents, size_t size, size_t nmemb, void *
                 std::string value = headerStr.substr(colon + 1);
 
                 trim(key);
+                toLower(key);
                 trim(value);
                 mem->addResponseHeader(key, value);
         }

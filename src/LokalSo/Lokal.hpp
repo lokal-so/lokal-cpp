@@ -216,13 +216,11 @@ public:
 	}
 
 	std::string post(std::string path, std::string data);
+	class CurlImpl;
+
 
 private:
-
-	std::string __curl(std::string path, std::string method,
-			   std::string req_body = "");
-
-	void *curl_;
+	std::unique_ptr<CurlImpl> curl_pImpl;
 	std::string base_url_;
 	std::vector<std::unique_ptr<Tunnel>> tunnels_;
 };

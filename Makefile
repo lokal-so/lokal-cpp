@@ -1,7 +1,7 @@
 
 STATIC_LIB = liblokal.a
 SHARED_LIB = liblokal.so
-SOURCES = src/LokalSo/Lokal.cpp
+SOURCES = src/LokalSo/Lokal.cpp src/LokalSo/CurlWrapper.cpp
 HEADERS = $(SOURCES:.cpp=.hpp)
 OBJECTS = $(SOURCES:.cpp=.o)
 INCLUDE = -I./src/

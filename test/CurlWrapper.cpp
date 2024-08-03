@@ -12,43 +12,43 @@ TEST(CurlWrapper, CreateCurlWrapper) {
 
 
 TEST(CurlWrapper, CreateWithProperties) {
-    CurlWrapper curl{};
-    curl.addHeader("Content-Type", "application/json");
-    curl.addHeader("Signature", "JustASignature");
-    
-    // By default GET
-    // curl.setMethod("GET")
+        CurlWrapper curl{};
+        curl.addHeader("Content-Type", "application/json");
+        curl.addHeader("Signature", "JustASignature");
 
-    curl.setUserAgent("UserAgent");
-    curl.setURL("https://github.com");
+        // By default GET
+        // curl.setMethod("GET")
 
-    ASSERT_EQ(curl.getReqHeader().getValue("Content-Type") , "application/json");
-    ASSERT_EQ(curl.getReqHeader().getValue("Signature") , "JustASignature");
+        curl.setUserAgent("UserAgent");
+        curl.setURL("https://github.com");
 
+        ASSERT_EQ(curl.getReqHeader().getValue("Content-Type") , "application/json");
+        ASSERT_EQ(curl.getReqHeader().getValue("Signature") , "JustASignature");
 
-    ASSERT_NO_THROW(curl.execute());
+        ASSERT_NO_THROW(curl.execute());
 
-    ASSERT_TRUE(curl.getReqHeader().getHeader().empty());
-    ASSERT_TRUE(!curl.getResBody().empty());
-    ASSERT_TRUE(!curl.getResHeader().getHeader().empty());
-    
+        // reset is called
+        ASSERT_TRUE(curl.getReqHeader().getHeader().empty());
 
+        ASSERT_FALSE(curl.getResBody().empty());
+        ASSERT_FALSE(curl.getResHeader().getHeader().empty());
 }
 
 TEST(CurlWrapper, FailToExecute) {
-    CurlWrapper curl{};
-    curl.addHeader("Content-Type", "application/json");
-    curl.addHeader("Signature", "JustASignature");
-    
-    // By default GET
-    // curl.setMethod("GET")
+        CurlWrapper curl{};
+        curl.addHeader("Content-Type", "application/json");
+        curl.addHeader("Signature", "JustASignature");
 
-    curl.setUserAgent("UserAgent");
-    curl.setURL("https://google.com");
+        // By default GET
+        // curl.setMethod("GET")
 
-    curl.setURL("https://127.0.0.1:8080");
+        curl.setUserAgent("UserAgent");
+        curl.setURL("https://127.0.0.1:8080");
 
-    ASSERT_THROW(curl.execute(), std::runtime_error);
+        ASSERT_TRUE(!curl.getReqHeader().getHeader().empty());
 
-    ASSERT_TRUE(curl.getReqHeader().getHeader().empty());
+        ASSERT_THROW(curl.execute(), std::runtime_error);
+
+        // Make sure reset is called
+        ASSERT_TRUE(curl.getReqHeader().getHeader().empty());
 }

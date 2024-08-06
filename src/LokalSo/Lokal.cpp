@@ -102,7 +102,7 @@ public:
 		return this->curlWrapper.setUserAgent(userAgent);
 	}
 	void execute() {
-		return this->execute();
+		return this->curlWrapper.execute();
 	}
 	Header const& getResHeader() const {
 		return this->curlWrapper.getResHeader();

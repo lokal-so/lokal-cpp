@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 #include "Lokal.hpp"
+#include "CurlWrapper.hpp"
 
 #include <curl/curl.h>
 #include <stdexcept>
@@ -71,108 +72,63 @@ void Tunnel::__showStartupBanner(void)
 LOKAL_CONST_DEF_CPP(Lokal::TunnelTypeHTTP);
 
 Lokal::Lokal(std::string base_url):
-	curl_(nullptr),
 	base_url_(base_url)
 {
+	this->curl_pImpl = std::make_unique<CurlImpl>();
 }
 
 Lokal::~Lokal(void)
 {
-	if (curl_)
-		curl_easy_cleanup(static_cast<CURL *>(curl_));
 }
 
-struct curl_data {
-	std::string res_body;
-	std::string res_hdr;
-	bool version_ok;
+class Lokal::CurlImpl {
+private:
+	CurlWrapper curlWrapper;
+public:
+	CurlImpl() {}
+	void setURL(std::string const& url) {
+		return this->curlWrapper.setURL(url);
+	}
+	void addHeader(std::string const& key, std::string const& value) {
+		return this->curlWrapper.addHeader(key, value);
+	}
+	void setMethod(std::string const& method) {
+		return this->curlWrapper.setMethod(method);
+	}
+	void setReqBody(std::string const& body) {
+		return this->curlWrapper.setReqBody(body);
+	}
+	void setUserAgent(std::string const& userAgent) {
+		return this->curlWrapper.setUserAgent(userAgent);
+	}
+	void execute() {
+		return this->curlWrapper.execute();
+	}
+	Header const& getResHeader() const {
+		return this->curlWrapper.getResHeader();
+
+	}
+	std::string const& getResBody() const {
+		return this->curlWrapper.getResBody();
+	}
 };
-
-static size_t res_body_callback(void *contents, size_t size, size_t nmemb,
-				void *userp)
-{
-	struct curl_data *mem = (struct curl_data *)userp;
-	size_t full_size = size * nmemb;
-
-	mem->res_body.append((char *)contents, full_size);
-	return full_size;
-}
-
-static size_t res_hdr_callback(void *contents, size_t size, size_t nmemb,
-			       void *userp)
-{
-	struct curl_data *mem = (struct curl_data *)userp;
-	size_t full_size = size * nmemb;
-
-	mem->res_hdr.append((char *)contents, full_size);
-	return full_size;
-}
 
 std::string Lokal::post(std::string path, std::string data)
 {
-	return __curl(path, "POST", data);
+	std::string url {this->base_url_ + path};
+	this->curl_pImpl->setURL(url);
+	this->curl_pImpl->setMethod("POST");
+	this->curl_pImpl->setUserAgent("Lokal Cpp - github.com/lokal-so/lokal-cpp");
+	this->curl_pImpl->addHeader("Content-Type", "application/json");
+	this->curl_pImpl->setReqBody(data);
+	this->curl_pImpl->execute();
+
+	// TODO: check server version
+	std::string serverVersion = this->curl_pImpl->getResHeader().getValue("Lokal-Server-Version");
+	// TODO: implement SemVer and lessThan method
+
+	return this->curl_pImpl->getResBody();
 }
 
-std::string Lokal::__curl(std::string path, std::string method,
-			  std::string req_body)
-{
-	struct curl_slist *headers = nullptr;
-	std::string url = base_url_ + path;
-	struct curl_data data;
-	long http_code = 0;
-	CURLcode res;
-	CURL *ch;
-
-	if (!curl_) {
-		ch = curl_easy_init();
-		if (!ch)
-			throw std::runtime_error("Failed to initialize curl");
-
-		curl_ = static_cast<void *>(ch);
-	} else {
-		ch = static_cast<CURL *>(curl_);
-	}
-
-	headers = curl_slist_append(headers, "Content-Type: application/json");
-
-	curl_easy_setopt(ch, CURLOPT_URL, url.c_str());
-	curl_easy_setopt(ch, CURLOPT_CUSTOMREQUEST, method.c_str());
-	curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, &res_body_callback);
-	curl_easy_setopt(ch, CURLOPT_WRITEDATA, &data);
-	curl_easy_setopt(ch, CURLOPT_HEADERFUNCTION, &res_hdr_callback);
-	curl_easy_setopt(ch, CURLOPT_HEADERDATA, &data);
-	curl_easy_setopt(ch, CURLOPT_USERAGENT, "Lokal Go - github.com/lokal-so/lokal-go");
-	curl_easy_setopt(ch, CURLOPT_VERBOSE, 0L);
-	curl_easy_setopt(ch, CURLOPT_HTTPHEADER, headers);
-	if (req_body != "") {
-		curl_easy_setopt(ch, CURLOPT_POST, 1L);
-		curl_easy_setopt(ch, CURLOPT_POSTFIELDSIZE, req_body.size());
-		curl_easy_setopt(ch, CURLOPT_POSTFIELDS, req_body.c_str());
-	}
-
-	res = curl_easy_perform(ch);
-	curl_slist_free_all(headers);
-	if (res != CURLE_OK) {
-		curl_ = nullptr;
-		curl_easy_cleanup(ch);
-		throw std::runtime_error(curl_easy_strerror(res));
-	}
-
-	curl_easy_getinfo(ch, CURLINFO_RESPONSE_CODE, &http_code);
-	if (http_code != 200) {
-		std::string msg;
-
-		try {
-			json j = json::parse(data.res_body);
-			msg = j["message"];
-		} catch (json::parse_error &e) {
-			msg = "";
-		}
-
-		throw std::runtime_error("HTTP error: " + std::to_string(http_code) + ": " + msg);
-	}
-
-	return data.res_body;
-}
 
 } /* namespace LokalSo */

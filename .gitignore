@@ -4,3 +4,5 @@
 *.a
 /example
 /.vscode/
+build
+.cache
